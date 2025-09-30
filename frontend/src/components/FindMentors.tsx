@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import db from '../services/database';
-import { Mentor, AvailabilityStatus, AnyUser, MentorshipRequest } from '../types';
+import { Mentor, AvailabilityStatus, AnyUser, MentorshipRequest, UserRole, Mentee } from '../types';
 import Card from './common/Card';
 import MagnifyingGlassIcon from './icons/MagnifyingGlassIcon';
 import Avatar from './common/Avatar';
@@ -88,6 +88,10 @@ const FindMentors: React.FC = () => {
         return map;
     }, [requests, user]);
 
+    // Exclude mentors already connected with this mentee
+    const connectedMentorIds = useMemo(() => (user?.role === UserRole.MENTEE ? (user as Mentee).mentorIds : []), [user]);
+    const visibleMentors = filteredMentors.filter(m => !connectedMentorIds.includes(m.id));
+
     return (
         <div className="container mx-auto px-6 py-12">
             <h1 className="text-4xl font-bold text-white mb-8 text-center">Find Your Mentor</h1>
@@ -122,7 +126,7 @@ const FindMentors: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-                {filteredMentors.map(mentor => (
+                {visibleMentors.map(mentor => (
                     <MentorCard key={mentor.id} mentor={mentor} status={statusByMentorId[mentor.id]} />
                 ))}
             </div>
