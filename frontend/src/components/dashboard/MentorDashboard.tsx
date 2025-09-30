@@ -144,14 +144,14 @@ const MentorDashboard: React.FC<MentorDashboardProps> = ({ user, setUser }) => {
                                             <p className="font-semibold text-white">{mentee.name}</p>
                                             <p className="text-sm text-gray-400">{mentee.department} - Year {mentee.year}</p>
                                         </div>
-                                        <div className="ml-auto flex items-center gap-2">
-                                            <button onClick={() => toggleMenteeGoals(mentee.id)} className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1 rounded-lg text-sm transition">
+                                        <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
+                                            <button onClick={() => toggleMenteeGoals(mentee.id)} className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded-lg text-sm transition whitespace-nowrap">
                                                 {menteeGoals[mentee.id] ? 'Hide Goals' : 'View Goals'}
                                             </button>
-                                            <button onClick={() => handleScheduleClick(mentee)} className="bg-brand-teal hover:bg-teal-500 text-white px-4 py-1 rounded-lg text-sm transition">
+                                            <button onClick={() => handleScheduleClick(mentee)} className="bg-brand-teal hover:bg-teal-500 text-white px-3 py-1 rounded-lg text-sm transition whitespace-nowrap">
                                                 Schedule
                                             </button>
-                                            <button onClick={() => navigate('/messages', { state: { recipientId: mentee.id } })} className="bg-brand-accent hover:bg-brand-accent-dark text-white px-4 py-1 rounded-lg text-sm transition">
+                                            <button onClick={() => navigate('/messages', { state: { recipientId: mentee.id } })} className="bg-brand-accent hover:bg-brand-accent-dark text-white px-3 py-1 rounded-lg text-sm transition whitespace-nowrap">
                                                 Message
                                             </button>
                                         </div>
