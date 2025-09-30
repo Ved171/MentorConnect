@@ -1,0 +1,5 @@
+{
+  "name": "MentorConnect",
+  "description": "A web-based platform that connects university students with senior students and faculty members for mentorship, featuring mentor discovery, messaging, and scheduling.",
+  "requestFramePermissions": []
+}
