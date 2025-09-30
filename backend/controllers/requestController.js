@@ -1,5 +1,6 @@
 const MentorshipRequest = require('../models/requestModel.js');
 const User = require('../models/userModel.js');
+const { getRecipientSocketId } = require('../socket/socketHandler.js');
 
 // @desc    Get all requests for the logged-in user (incoming or outgoing)
 // @route   GET /api/requests
@@ -35,6 +36,12 @@ const createRequest = async (req, res) => {
             status: 'Pending'
         });
         const savedRequest = await newRequest.save();
+        // Emit to mentor (recipient) about new request
+        const io = req.app.get('io');
+        const mentorSocketId = getRecipientSocketId(toId.toString());
+        if (io && mentorSocketId) {
+            io.to(mentorSocketId).emit('request:created', { request: savedRequest });
+        }
         res.status(201).json(savedRequest);
     } catch (error) {
         res.status(400).json({ message: 'Invalid request data', error: error.message });
@@ -78,8 +85,23 @@ const updateRequestStatus = async (req, res) => {
                 { $addToSet: { mentorIds: request.toId } }
             );
 
+            // Notify both users about the update
+            const io = req.app.get('io');
+            const menteeSocketId = getRecipientSocketId(request.fromId.toString());
+            const mentorSocketId = getRecipientSocketId(request.toId.toString());
+            if (io) {
+                if (menteeSocketId) io.to(menteeSocketId).emit('request:updated', { request });
+                if (mentorSocketId) io.to(mentorSocketId).emit('request:updated', { request });
+            }
             res.json({ request, updatedMentor });
         } else { // Declined
+            const io = req.app.get('io');
+            const menteeSocketId = getRecipientSocketId(request.fromId.toString());
+            const mentorSocketId = getRecipientSocketId(request.toId.toString());
+            if (io) {
+                if (menteeSocketId) io.to(menteeSocketId).emit('request:updated', { request });
+                if (mentorSocketId) io.to(mentorSocketId).emit('request:updated', { request });
+            }
             res.json({ request });
         }
     } catch (error) {

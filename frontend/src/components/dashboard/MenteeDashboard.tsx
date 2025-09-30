@@ -11,6 +11,7 @@ import PlusCircleIcon from '../icons/PlusCircleIcon';
 import TrashIcon from '../icons/TrashIcon';
 import ClipboardCheckIcon from '../icons/ClipboardCheckIcon';
 import Avatar from '../common/Avatar';
+import { getSocket } from '../../services/socket';
 
 
 const StatCard: React.FC<{ icon: React.ReactNode; label: string; value: string | number }> = ({ icon, label, value }) => (
@@ -33,14 +34,17 @@ const MenteeDashboard: React.FC<{ user: Mentee }> = ({ user }) => {
     const [newGoalText, setNewGoalText] = useState('');
     const [sessions, setSessions] = useState<Session[]>([]);
     const [allUsers, setAllUsers] = useState<AnyUser[]>([]);
+    const [banner, setBanner] = useState<string | null>(null);
 
     const fetchDashboardData = useCallback(async () => {
         // Fetch all users once for efficiency
         const allUsersData = await db.getUsers();
         setAllUsers(allUsersData);
         
-        // Fetch mentors and requests
-        const mentors = allUsersData.filter(u => user.mentorIds.includes(u.id));
+        // Refresh current user from API to get latest mentorIds
+        const freshSelf = await db.findUserById(user.id);
+        const mentorIds = (freshSelf && 'mentorIds' in freshSelf ? (freshSelf as Mentee).mentorIds : user.mentorIds);
+        const mentors = allUsersData.filter(u => mentorIds.includes(u.id));
         setMyMentors(mentors);
 
         const allRequests = await db.getRequests();
@@ -75,6 +79,31 @@ const MenteeDashboard: React.FC<{ user: Mentee }> = ({ user }) => {
         };
 
         fetchSuggestions();
+        const socket = getSocket();
+        const handler = (payload?: { request?: MentorshipRequest }) => {
+            const updated = payload?.request;
+            if (!updated || updated.fromId !== user.id) return;
+            // Update UI immediately
+            setPendingRequests(prev => prev.map(r => r.id === updated.id ? { ...r, status: updated.status } : r));
+            if (updated.status === 'Accepted') {
+                setBanner('Your mentorship request was accepted!');
+                setTimeout(() => setBanner(null), 4000);
+            }
+            // Refresh full data now to sync mentors list and remove from pending if needed
+            fetchDashboardData();
+        };
+        socket.on('request:updated', handler);
+        const createdHandler = (payload?: { request?: MentorshipRequest }) => {
+            const created = payload?.request;
+            if (created?.fromId === user.id) {
+                fetchDashboardData();
+            }
+        };
+        socket.on('request:created', createdHandler);
+        return () => {
+            socket.off('request:updated', handler);
+            socket.off('request:created', createdHandler);
+        };
     }, [user, fetchDashboardData]);
 
     const handleAddGoal = async (e: React.FormEvent) => {
@@ -100,6 +129,9 @@ const MenteeDashboard: React.FC<{ user: Mentee }> = ({ user }) => {
 
     return (
         <div className="space-y-8">
+            {banner && (
+                <div className="bg-green-600 text-white text-sm px-4 py-2 rounded-md">{banner}</div>
+            )}
             {/* Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard icon={<UserGroupIcon className="w-6 h-6 text-brand-accent"/>} label="Active Mentors" value={myMentors.length} />

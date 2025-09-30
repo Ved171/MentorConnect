@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useOutletContext, Navigate, useNavigate } from 'react-router-dom';
 import db from '../services/database';
+import { getSocket } from '../services/socket';
 import { Mentor, Mentee, UserRole, RequestStatus } from '../types';
 import Card from './common/Card';
 import Avatar from './common/Avatar';
@@ -38,6 +39,31 @@ const MentorProfile: React.FC = () => {
             setLoading(false);
         };
         fetchMentorData();
+
+        // Real-time updates for request status on this mentor profile
+        const socket = getSocket();
+        const handler = (payload?: { request?: { id: string; fromId: string; toId: string; status: RequestStatus } }) => {
+            const updated = payload?.request;
+            if (!updated || !mentorId || !currentUser) return;
+            if (updated.toId === mentorId && updated.fromId === currentUser.id) {
+                if (updated.status === RequestStatus.ACCEPTED) {
+                    setHasPendingRequest(false);
+                    setIsAlreadyMentor(true);
+                    setMessage('Your mentorship request was accepted!');
+                    setTimeout(() => setMessage(''), 4000);
+                } else if (updated.status === RequestStatus.DECLINED) {
+                    setHasPendingRequest(false);
+                    setMessage('Your mentorship request was declined.');
+                    setTimeout(() => setMessage(''), 4000);
+                } else {
+                    setHasPendingRequest(true);
+                }
+            }
+        };
+        socket.on('request:updated', handler);
+        return () => {
+            socket.off('request:updated', handler);
+        };
     }, [mentorId, currentUser]);
     
     const handleSendRequest = async () => {

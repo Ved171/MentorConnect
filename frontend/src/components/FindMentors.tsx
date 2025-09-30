@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link, useOutletContext } from 'react-router-dom';
 import db from '../services/database';
-import { Mentor, AvailabilityStatus } from '../types';
+import { Mentor, AvailabilityStatus, AnyUser, MentorshipRequest } from '../types';
 import Card from './common/Card';
 import MagnifyingGlassIcon from './icons/MagnifyingGlassIcon';
 import Avatar from './common/Avatar';
+import { getSocket } from '../services/socket';
 
-const MentorCard: React.FC<{ mentor: Mentor }> = ({ mentor }) => {
+const MentorCard: React.FC<{ mentor: Mentor, status?: 'Pending' | 'Accepted' | 'Declined' }> = ({ mentor, status }) => {
     const availabilityColor = {
         [AvailabilityStatus.AVAILABLE]: 'bg-green-500',
         [AvailabilityStatus.BUSY]: 'bg-yellow-500',
@@ -23,6 +24,11 @@ const MentorCard: React.FC<{ mentor: Mentor }> = ({ mentor }) => {
                 <div className={`w-3 h-3 rounded-full ${availabilityColor[mentor.availability]}`}></div>
                 <span className="text-xs text-gray-300">{mentor.availability}</span>
             </div>
+            {status && (
+                <div className={`mb-3 text-xs font-semibold px-2 py-1 rounded-full border ${status === 'Accepted' ? 'bg-green-600/30 text-green-300 border-green-500/40' : status === 'Pending' ? 'bg-yellow-600/30 text-yellow-300 border-yellow-500/40' : 'bg-red-600/30 text-red-300 border-red-500/40'}`}>
+                    Request {status}
+                </div>
+            )}
             <div className="flex flex-wrap justify-center gap-2 mb-4 min-h-[26px]">
                 {mentor.skills.slice(0, 3).map(skill => (
                     <span key={skill} className="bg-gray-700 text-gray-300 text-xs font-medium px-2.5 py-1 rounded-full">{skill}</span>
@@ -37,17 +43,31 @@ const MentorCard: React.FC<{ mentor: Mentor }> = ({ mentor }) => {
 
 
 const FindMentors: React.FC = () => {
+    const { user } = useOutletContext<{ user: AnyUser }>();
     const [mentors, setMentors] = useState<Mentor[]>([]);
+    const [requests, setRequests] = useState<MentorshipRequest[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [departmentFilter, setDepartmentFilter] = useState('All');
     const [availabilityFilter, setAvailabilityFilter] = useState('All');
     
     useEffect(() => {
-        const fetchMentors = async () => {
-            const allMentors = await db.getMentors();
+        const fetchData = async () => {
+            const [allMentors, myRequests] = await Promise.all([
+                db.getMentors(),
+                db.getRequests(),
+            ]);
             setMentors(allMentors as Mentor[]);
+            setRequests(myRequests);
         };
-        fetchMentors();
+        fetchData();
+        const socket = getSocket();
+        const refetch = () => fetchData();
+        socket.on('request:created', refetch);
+        socket.on('request:updated', refetch);
+        return () => {
+            socket.off('request:created', refetch);
+            socket.off('request:updated', refetch);
+        };
     }, []);
     
     const filteredMentors = mentors.filter(mentor => {
@@ -59,6 +79,14 @@ const FindMentors: React.FC = () => {
 
     const departments = ['All', ...new Set(mentors.map(m => m.department))];
     const availabilities = ['All', ...Object.values(AvailabilityStatus)];
+
+    const statusByMentorId = useMemo(() => {
+        const map: Record<string, 'Pending' | 'Accepted' | 'Declined'> = {};
+        requests
+            .filter(r => r.fromId === user?.id)
+            .forEach(r => { map[r.toId] = r.status; });
+        return map;
+    }, [requests, user]);
 
     return (
         <div className="container mx-auto px-6 py-12">
@@ -95,7 +123,7 @@ const FindMentors: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
                 {filteredMentors.map(mentor => (
-                    <MentorCard key={mentor.id} mentor={mentor} />
+                    <MentorCard key={mentor.id} mentor={mentor} status={statusByMentorId[mentor.id]} />
                 ))}
             </div>
         </div>

@@ -9,6 +9,7 @@ import CalendarIcon from '../icons/CalendarIcon';
 import ScheduleSessionModal from './ScheduleSessionModal';
 import MyResources from './MyResources';
 import Avatar from '../common/Avatar';
+import { getSocket } from '../../services/socket';
 
 type RequestWithMentee = MentorshipRequest & { mentee: AnyUser | undefined };
 
@@ -58,6 +59,14 @@ const MentorDashboard: React.FC<MentorDashboardProps> = ({ user, setUser }) => {
 
     useEffect(() => {
         fetchData();
+        const socket = getSocket();
+        const handler = () => fetchData();
+        socket.on('request:created', handler);
+        socket.on('request:updated', handler);
+        return () => {
+            socket.off('request:created', handler);
+            socket.off('request:updated', handler);
+        };
     }, [fetchData]);
 
     const handleRequest = async (requestId: string, status: RequestStatus.ACCEPTED | RequestStatus.DECLINED) => {

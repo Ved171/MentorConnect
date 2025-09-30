@@ -28,7 +28,7 @@ const Header: React.FC<HeaderProps> = ({ onLogout, user, unreadCount }) => {
                 {/* Mobile menu button */}
                 <button
                     aria-label="Toggle menu"
-                    className="ml-auto inline-flex items-center justify-center w-11 h-11 text-white focus:outline-none focus:ring-2 focus:ring-white rounded-lg z-50 bg-brand-accent border-2 border-white/30 shadow-glow-purple"
+                    className="md:hidden ml-auto inline-flex items-center justify-center w-11 h-11 text-white focus:outline-none focus:ring-2 focus:ring-white rounded-lg z-50 bg-brand-accent border-2 border-white/30 shadow-glow-purple"
                     onClick={() => setMobileOpen((prev) => !prev)}
                 >
                     {mobileOpen ? (
