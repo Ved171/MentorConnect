@@ -8,7 +8,7 @@ const protect = require('../middleware/auth.js');
 const router = express.Router();
 
 // --- Multer Setup for File Uploads ---
-const uploadDir = 'backend/uploads/';
+const uploadDir = path.join(__dirname, '..', 'uploads');
 fs.mkdirSync(uploadDir, { recursive: true }); // Ensure upload directory exists
 
 const storage = multer.diskStorage({

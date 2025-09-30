@@ -14,7 +14,13 @@ const ResourceCard: React.FC<{ resource: Resource }> = ({ resource }) => {
     };
     
     // Use relative URLs for uploaded files, which will be handled by the server/proxy.
-    const resourceUrl = resource.url;
+    let resourceUrl = resource.url;
+    if (!/^https?:\/\//i.test(resourceUrl)) {
+        // Keep existing absolute '/uploads/...' paths as-is
+        if (!resourceUrl.startsWith('/uploads/')) {
+            resourceUrl = `/uploads/${resourceUrl.replace(/^\/+/, '')}`;
+        }
+    }
 
     return (
         <Card className="flex flex-col group">
